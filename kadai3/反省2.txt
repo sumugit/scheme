@@ -1,0 +1,103 @@
+(define ** expt)
+
+(define diff (
+              lambda (ope)(
+                               cond ((number? ope) 0)
+                                     ((equal? ope 'x) 1)
+                                     ((equal? '+ (car ope)) (cons '+ (map (lambda (x)(diff x)) (cdr ope))))
+                                     ((equal? '- (car ope)) (cons '- (map (lambda (x)(diff x)) (cdr ope))))
+                                     ((equal? '* (car ope)) (list '+ (list '* (car (cdr ope)) (diff (car (cdr (cdr ope))))) (list '* (diff (car (cdr ope))) (car (cdr (cdr ope))))))
+                                     (else (list '* (car (cdr (cdr ope))) (list '* (diff (car (cdr ope))) (list '** (car (cdr ope)) (- (car (cdr (cdr ope))) 1)))))
+                                     )
+               ))
+
+(define simple+(
+               lambda (non-zero-list)(
+                            cond ((null? non-zero-list) 0)
+                                 ((null? (cdr non-zero-list)) (car non-zero-list))
+                                 (else (cons '+ non-zero-list))
+                           )
+                ))
+
+(define simple-(
+               lambda (non-zero-list)(
+                            cond ((null? non-zero-list) (car lst))
+                                 (else (cons '- non-zero-list))
+                           )
+                ))
+
+(define simple*(
+               lambda (lst)(
+                            cond ((equal? (car lst) 0) 0)
+                                 ((equal? (cadr lst) 0) 0)
+                                 ((equal? (car lst) 1) (cadr lst))
+                                 ((equal? (cadr lst) 1) (car lst))
+                                 (else (cons '* lst))
+                           )
+                ))
+
+
+(define simple**(
+               lambda (lst)(
+                            cond ((equal? (cadr lst) 0) 1)
+                                 ((equal? (cadr lst) 1) (car lst))
+                                 (else (cons '** lst))
+                           )
+                ))
+
+(define myappend (
+                 lambda (ls)
+                  (apply append ls)
+                  ))
+
+(define nonZero(
+                lambda(lst)(
+                            cond ((null? lst) '())
+                                 (else (myappend (list (if (equal? (car lst) 0) '() (list (car lst))) (nonZero (cdr lst)))))
+                            )
+                 ))
+
+(define calc (
+              lambda (lst)(
+                           cond ((number? lst) lst)
+                                ((symbol? lst) lst)
+                                ((equal? (car (cdr lst)) 'x) (if (equal? (car (cdr (cdr lst))) 0) '0 (if (equal? (car (cdr (cdr lst))) 1) 'x lst)))
+                                ((equal? '+ (car lst)) (apply + (cdr lst)))
+                                ((equal? '- (car lst)) (apply - (cdr lst)))
+                                ((equal? '* (car lst)) (apply * (cdr lst)))
+                                ((equal? '** (car lst)) (apply ** (cdr lst)))
+                                (else (map (lambda(x)(calc x)) lst))
+                                     )
+               ))
+
+(define calc2 (
+               lambda (lst)(
+                            cond ((number? lst) lst)
+                                 ((equal? '(+ x 0) lst) 'x)
+                                 ((equal? '(+ 0 x) lst) 'x)
+                                 ((equal? '(- x 0) lst) 'x)
+                                 ((equal? '(* x 0) lst) 0)
+                                 ((equal? '(* 0 x) lst) 0)
+                                 ((equal? '(* x 1) lst) 'x)
+                                 ((equal? '(* 1 x) lst) 'x)
+                                 ((equal? '(** x 0) lst) '1)
+                                 ((equal? '(** x 1) lst) 'x)
+                                 ((equal? '+ (car lst)) (if (number? (car (cdr lst))) (if (number? (car (cdr (cdr lst)))) (apply + (cdr lst)) (if (equal? (car (cdr (cdr lst))) 'x) lst (calc2 (cons '+ (calc2 (cdr lst)))))) (if (equal? (car(cdr lst)) 'x) lst (calc2 (cons '+ (calc2 (cdr lst)))))))
+                                 ((equal? '- (car lst)) (if (number? (car (cdr lst))) (if (number? (car (cdr (cdr lst)))) (apply - (cdr lst)) (if (equal? (car (cdr (cdr lst))) 'x) lst (calc2 (cons '- (calc2 (cdr lst)))))) (if (equal? (car(cdr lst)) 'x) lst (calc2 (cons '- (calc2 (cdr lst)))))))
+                                 ((equal? '* (car lst)) (if (number? (car (cdr lst))) (if (number? (car (cdr (cdr lst)))) (apply * (cdr lst)) (if (equal? (car (cdr (cdr lst))) 'x) lst (calc2 (cons '* (calc2 (cdr lst)))))) (if (equal? (car(cdr lst)) 'x) lst (calc2 (cons '* (calc2 (cdr lst)))))))
+                                 ((equal? '** (car lst)) (if (number? (car (cdr lst))) (if (number? (car (cdr (cdr lst)))) (apply ** (cdr lst)) (if (equal? (car (cdr (cdr lst))) 'x) lst (calc2 (cons '** (calc2 (cdr lst)))))) (if (equal? (car(cdr lst)) 'x) lst (calc2 (cons '** (calc2 (cdr lst)))))))
+                                 (else (map (lambda(x)(calc2 x)) lst))
+                            )
+                ))
+
+
+(define simple(
+               lambda (lst)(
+                           cond ((number? lst) lst)
+                                ((symbol? lst) lst)
+                                ((equal? '+ (car lst)) (simple+ (nonZero (calc2 (cdr lst)))))
+                                ((equal? '- (car lst)) (simple- (cons (car (calc2 (cdr lst))) (nonZero (cdr (calc2 (cdr lst)))))))
+                                ((equal? '* (car lst)) (simple* (cdr lst)))
+                                ((equal? '** (car lst)) (simple** (cdr lst)))
+                           )
+                ))

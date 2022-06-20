@@ -1,0 +1,125 @@
+ようこそ DrRacket, バージョン 7.7 [3m].
+言語: R5RS; memory limit: 128 MB.
+> (nonZero '(+ 1 0))
+(+ 1 ())
+> (nonZero '(+ 1 3 5))
+(+ 1 3 5)
+> (nonZero '(+ 1 4 0))
+(+ 1 4 ())
+> (nonZero '(* 2 (* (+ (* x 0) (* 1 3)) (** (* x 3) 1))))
+(* 2 (* (+ (* x 0) (* 1 3)) (** (* x 3) 1)))
+> (nonZero '(* x 0))
+(* x ())
+> (nonZero '(x 0))
+(x ())
+> (null? (cdr (nonZero '(x 0))))
+#f
+> (cdr (nonZero '(x 0)))
+(())
+> (myapply '(()))
+. . myapply: undefined;
+ cannot reference an identifier before its definition
+> (myappend '(()))
+()
+> (myappend '(* x ()))
+. . mcar: contract violation
+  expected: mpair?
+  given: x
+> (myappned (x ()))
+. #%app: missing procedure expression;
+ probably originally (), which is an illegal empty application in: (#%app)
+> (myappned (x '()))
+. . myappned: undefined;
+ cannot reference an identifier before its definition
+> (myappned '(x ()))
+. . myappned: undefined;
+ cannot reference an identifier before its definition
+> (myappend '(x ()))
+. . mcar: contract violation
+  expected: mpair?
+  given: x
+> (myappend (x '()))
+. . x: undefined;
+ cannot reference an identifier before its definition
+> (myappend '(()))
+()
+> (null? (myappend '(())))
+#t
+> (myappend (cdr (x '())))
+. . x: undefined;
+ cannot reference an identifier before its definition
+> (myappend (cdr '(x ())))
+()
+> (null? (myappend (cdr '(x ()))))
+#t
+> 
+
+
+(define diff (
+              lambda (ope)(
+                               cond ((number? ope) 0)
+                                     ((equal? ope 'x) 1)
+                                     ((equal? '+ (car ope)) (cons '+ (map (lambda (x)(diff x)) (cdr ope))))
+                                     ((equal? '- (car ope)) (cons '- (map (lambda (x)(diff x)) (cdr ope))))
+                                     ((equal? '* (car ope)) (list '+ (list '* (car (cdr ope)) (diff (car (cdr (cdr ope))))) (list '* (diff (car (cdr ope))) (car (cdr (cdr ope))))))
+                                     (else (list '* (car (cdr (cdr ope))) (list '* (diff (car (cdr ope))) (list '** (car (cdr ope)) (- (car (cdr (cdr ope))) 1)))))
+                                     )
+               ))
+
+(define simple+(
+               lambda (non-zero-list)(
+                            cond ((null? non-zero-list) 0)
+                                 ((null? (cdr non-zero-list)) (car non-zero-list))
+                                 (else (cons '+ non-zero-list))
+                           )
+                ))
+
+(define simple-(
+               lambda (lst non-zero-list)(
+                            cond ((null? non-zero-list) (car lst))
+                                 (else (cons '- (car lst)))
+                           )
+                ))
+
+(define simple*(
+               lambda (lst)(
+                            cond ((equal? (car lst) 0) 0)
+                                 ((equal? (cadr lst) 0) 0)
+                                 ((equal? (car lst) 1) (cadr lst))
+                                 ((equal? (cadr lst) 1) (car lst))
+                                 (else (cons '* lst))
+                           )
+                ))
+
+
+(define simple**(
+               lambda (lst)(
+                            cond ((equal? (cadr lst) 0) 1)
+                                 ((equal? (cadr lst) 1) (car lst))
+                                 (else (cons '** lst))
+                           )
+                ))
+
+(define myappend (
+                 lambda (ls)
+                  (apply append ls)
+                  ))
+
+(define nonZero(
+                lambda(lst)(
+                            cond ((null? lst) '())
+                                 (else (myappend (list (if (equal? (car lst) 0) '() (list (car lst))) (nonZero (cdr lst)))))
+                            )
+                 ))
+
+
+(define simple(
+               lambda (lst)(
+                           cond ((number? lst) lst)
+                                ((symbol? lst) lst)
+                                ((equal? '+ (car lst)) (simple+ (nonZero (cdr lst))))
+                                ((equal? '- (car lst)) (simple- (nonZero (cdr (cdr lst)))))
+                                ((equal? '* (car lst)) (simple* (cdr lst)))
+                                ((equal? '** (car lst)) (simple** (cdr lst)))
+                           )
+                ))

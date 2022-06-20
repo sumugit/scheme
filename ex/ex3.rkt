@@ -1,0 +1,12 @@
+(define times
+  (lambda (n ls)
+         (map (lambda (x) (* n x)) ls)
+         ))
+
+(define times2
+  (lambda (n ls)
+    (if (null? ls)
+        '()
+        (cons (* n (car ls)) (times2 n (cdr ls))))
+        )
+    ))
